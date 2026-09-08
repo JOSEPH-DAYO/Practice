@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create your account — form validation demo</title>
+<style>
+  :root {
+    --ink: #1F2328;
+    --muted: #6B7280;
+    --line: #D9DCE1;
+    --blue: #2563EB;
+    --blue-soft: #E7EEFD;
+    --red: #B3261E;
+    --red-soft: #FBEAE9;
+    --bg: #F3F4F6;
+    --card: #FFFFFF;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    font-family: var(--font);
+    color: var(--ink);
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .card h1 {
+    font-size: 1.4rem;
+    margin: 0 0 6px 0;
+  }
+
+  .card p.sub {
+    margin: 0 0 24px 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .summary {
+    display: none;
+    background: var(--red-soft);
+    border: 1px solid var(--red);
+    color: var(--red);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .summary.show { display: block; }
+
+  .field { margin-bottom: 20px; }
+
+  .field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .field .hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: -2px 0 6px 0;
+  }
+
+  .input-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .field input {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 0.95rem;
+    padding: 10px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field input:focus-visible {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-soft);
+  }
+
+  .field.invalid input { border-color: var(--red); }
+  .field.invalid input:focus-visible { box-shadow: 0 0 0 3px var(--red-soft); }
+  .field.valid input { border-color: #1F9D6C; }
+
+  .toggle-visibility {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    font-family: var(--font);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--blue);
+    cursor: pointer;
+    padding: 6px 8px;
+  }
+
+  .toggle-visibility:hover { text-decoration: underline; }
+
+  .field .message {
+    min-height: 16px;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .field.invalid .message { color: var(--red); }
+  .field.valid .message { color: #1F9D6C; }
+
+  .pw-rules {
+    list-style: none;
+    margin: 8px 0 0 0;
+    padding: 0;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .pw-rules li {
+    padding: 2px 0 2px 18px;
+    position: relative;
+  }
+
+  .pw-rules li::before {
+    content: "\2013";
+    position: absolute;
+    left: 2px;
+  }
+
+  .pw-rules li.met {
+    color: #1F9D6C;
+  }
+
+  .pw-rules li.met::before {
+    content: "\2713";
+  }
+
+  button.submit {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--blue);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background-color 0.15s ease;
+  }
+
+  button.submit:hover { background: #1D4FC4; }
+  button.submit:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+
+  .success { display: none; }
+  .success.show { display: block; }
+  .card-inner.hidden { display: none; }
+
+  .success h1 { font-size: 1.4rem; margin: 0 0 8px 0; }
+  .success p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin: 0 0 20px 0; }
+
+  .recap {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 20px;
+  }
+
+  .recap div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.85rem;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .recap div:last-child { border-bottom: none; }
+  .recap span.k { color: var(--muted); }
+  .recap span.v { font-weight: 600; word-break: break-all; text-align: right; }
+
+  .start-over {
+    background: none;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-family: var(--font);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .start-over:hover { background: var(--bg); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-inner" id="cardInner">
+    <h1>Create your account</h1>
+    <p class="sub">All fields are required.</p>
+
+    <div class="summary" id="summary" role="alert"></div>
+
+    <form id="signupForm" novalidate>
+
+      <div class="field" id="field-name">
+        <label for="name">Full name</label>
+        <input type="text" id="name" name="name" autocomplete="name" aria-describedby="msg-name" />
+        <div class="message" id="msg-name"></div>
+      </div>
+
+      <div class="field" id="field-email">
+        <label for="email">School email address</label>
+        <p class="hint">Must be a student.aul.edu.ng address.</p>
+        <input type="email" id="email" name="email" autocomplete="email" placeholder="jane.doe@student.aul.edu.ng" aria-describedby="msg-email" />
+        <div class="message" id="msg-email"></div>
+      </div>
+
+      <div class="field" id="field-password">
+        <label for="password">Password</label>
+        <div class="input-row">
+          <input type="password" id="password" name="password" autocomplete="new-password" aria-describedby="msg-password" />
+          <button type="button" class="toggle-visibility" id="togglePw" aria-pressed="false">Show</button>
+        </div>
+        <ul class="pw-rules" id="pwChecklist">
+          <li data-rule="length">At least 8 characters</li>
+          <li data-rule="upper">One uppercase letter</li>
+          <li data-rule="lower">One lowercase letter</li>
+          <li data-rule="digit">At least one number</li>
+          <li data-rule="special">At least one special character (like ! or #)</li>
+        </ul>
+        <div class="message" id="msg-password"></div>
+      </div>
+
+      <div class="field" id="field-confirm">
+        <label for="confirm">Confirm password</label>
+        <input type="password" id="confirm" name="confirm" autocomplete="new-password" aria-describedby="msg-confirm" />
+        <div class="message" id="msg-confirm"></div>
+      </div>
+
+      <button type="submit" class="submit">Create account</button>
+    </form>
+  </div>
+
+  <div class="success" id="success">
+    <h1>You're all set</h1>
+    <p>Every field passed validation. Here's a recap of what you entered.</p>
+    <div class="recap" id="recap"></div>
+    <button type="button" class="start-over" id="startOver">Start over</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Regex patterns ----------
+  var PATTERNS = {
+    name: /^[A-Za-z]+(?:[\s'-][A-Za-z]+)*$/,
+    email: /^[a-zA-Z0-9._%+-]+@student\.aul\.edu\.ng$/i
+  };
+
+  function passwordRuleState(v) {
+    return {
+      length: v.length >= 8,
+      upper: /[A-Z]/.test(v),
+      lower: /[a-z]/.test(v),
+      digit: /\d/.test(v),
+      special: /[^A-Za-z0-9]/.test(v)
+    };
+  }
+
+  // ---------- Field validators ----------
+  function validateName(raw) {
+    var v = raw.trim();
+    if (v.length === 0) return { valid: false, message: "Enter your full name." };
+    if (v.length < 2) return { valid: false, message: "Name needs at least 2 letters." };
+    if (!PATTERNS.name.test(v)) return { valid: false, message: "Use letters only, like \"Ada Lovelace\"." };
+    return { valid: true, message: "Looks good." };
+  }
+
+  function validateEmail(raw) {
+    var v = raw.trim();
+    if (v.length === 0) return { valid: false, message: "Enter your school email address." };
+    if (!PATTERNS.email.test(v)) return { valid: false, message: "Use your school email, e.g. jane.doe@student.aul.edu.ng." };
+    return { valid: true, message: "Looks good." };
+  }
+
+  function validatePassword(raw) {
+    if (raw.length === 0) return { valid: false, message: "Create a password." };
+    var state = passwordRuleState(raw);
+    var allMet = state.length && state.upper && state.lower && state.digit && state.special;
+    if (!allMet) return { valid: false, message: "Your password doesn't meet all the requirements yet — see the list below." };
+    return { valid: true, message: "Looks good." };
+  }
+
+  function validateConfirm(raw, passwordValue) {
+    if (raw.length === 0) return { valid: false, message: "Re-enter your password." };
+    if (raw !== passwordValue) return { valid: false, message: "This doesn't match your password." };
+    return { valid: true, message: "Passwords match." };
+  }
+
+  // ---------- DOM wiring ----------
+  var els = {
+    name: document.getElementById("name"),
+    email: document.getElementById("email"),
+    password: document.getElementById("password"),
+    confirm: document.getElementById("confirm")
+  };
+
+  var touched = { name: false, email: false, password: false, confirm: false };
+
+  function applyResult(fieldKey, result, forceShow) {
+    var fieldEl = document.getElementById("field-" + fieldKey);
+    var msgEl = document.getElementById("msg-" + fieldKey);
+    var show = touched[fieldKey] || forceShow;
+
+    fieldEl.classList.remove("valid", "invalid");
+    if (!show) {
+      msgEl.textContent = "";
+      return;
+    }
+    if (result.valid) {
+      fieldEl.classList.add("valid");
+      msgEl.textContent = result.message;
+    } else {
+      fieldEl.classList.add("invalid");
+      msgEl.textContent = result.message;
+    }
+  }
+
+  function runValidation(fieldKey, forceShow) {
+    var result;
+    if (fieldKey === "name") result = validateName(els.name.value);
+    else if (fieldKey === "email") result = validateEmail(els.email.value);
+    else if (fieldKey === "password") result = validatePassword(els.password.value);
+    else if (fieldKey === "confirm") result = validateConfirm(els.confirm.value, els.password.value);
+    applyResult(fieldKey, result, forceShow);
+    return result.valid;
+  }
+
+  function updateChecklist() {
+    var state = passwordRuleState(els.password.value);
+    var items = document.querySelectorAll("#pwChecklist li");
+    items.forEach(function (li) {
+      var rule = li.getAttribute("data-rule");
+      li.classList.toggle("met", !!state[rule]);
+    });
+  }
+
+  ["name", "email", "password", "confirm"].forEach(function (key) {
+    var el = els[key];
+
+    el.addEventListener("blur", function () {
+      touched[key] = true;
+      runValidation(key, false);
+    });
+
+    el.addEventListener("input", function () {
+      if (key === "password") {
+        updateChecklist();
+        if (touched.confirm || els.confirm.value.length > 0) {
+          runValidation("confirm", false);
+        }
+      }
+      if (touched[key]) {
+        runValidation(key, false);
+      }
+    });
+  });
+
+  document.getElementById("togglePw").addEventListener("click", function () {
+    var isHidden = els.password.type === "password";
+    els.password.type = isHidden ? "text" : "password";
+    this.textContent = isHidden ? "Hide" : "Show";
+    this.setAttribute("aria-pressed", isHidden ? "true" : "false");
+  });
+
+  var FIELD_LABELS = {
+    name: "Full name",
+    email: "Email address",
+    password: "Password",
+    confirm: "Confirm password"
+  };
+
+  document.getElementById("signupForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    var order = ["name", "email", "password", "confirm"];
+    var invalidKeys = [];
+
+    order.forEach(function (key) {
+      touched[key] = true;
+      var ok = runValidation(key, true);
+      if (!ok) invalidKeys.push(key);
+    });
+    updateChecklist();
+
+    var summaryEl = document.getElementById("summary");
+
+    if (invalidKeys.length > 0) {
+      var names = invalidKeys.map(function (k) { return FIELD_LABELS[k]; }).join(", ");
+      var word = invalidKeys.length === 1 ? "field needs" : "fields need";
+      summaryEl.textContent = invalidKeys.length + " " + word + " attention: " + names + ".";
+      summaryEl.classList.add("show");
+      document.getElementById(invalidKeys[0]).focus();
+      return;
+    }
+
+    summaryEl.classList.remove("show");
+
+    var recap = document.getElementById("recap");
+    recap.innerHTML =
+      "<div><span class=\"k\">Name</span><span class=\"v\">" + escapeHtml(els.name.value.trim()) + "</span></div>" +
+      "<div><span class=\"k\">Email</span><span class=\"v\">" + escapeHtml(els.email.value.trim()) + "</span></div>";
+
+    document.getElementById("cardInner").classList.add("hidden");
+    document.getElementById("success").classList.add("show");
+  });
+
+  document.getElementById("startOver").addEventListener("click", function () {
+    document.getElementById("signupForm").reset();
+    resetFields();
+    document.getElementById("success").classList.remove("show");
+    document.getElementById("cardInner").classList.remove("hidden");
+    document.getElementById("summary").classList.remove("show");
+    els.name.focus();
+  });
+
+  function resetFields() {
+    ["name", "email", "password", "confirm"].forEach(function (key) {
+      touched[key] = false;
+      var fieldEl = document.getElementById("field-" + key);
+      fieldEl.classList.remove("valid", "invalid");
+      document.getElementById("msg-" + key).textContent = "";
+    });
+    updateChecklist();
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+})();
+</script>
+
+</body>
+</html>
