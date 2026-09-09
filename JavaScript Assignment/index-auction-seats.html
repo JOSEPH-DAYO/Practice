@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paddle & Place — Seat Reservations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B1F1C;
+    --ink-2:#242A25;
+    --paper:#F4EEDF;
+    --paper-dim:#E4DBC3;
+    --brass:#B58A46;
+    --brass-deep:#8C6A34;
+    --claret:#7C2E28;
+    --line: rgba(244,238,223,0.14);
+    --line-strong: rgba(244,238,223,0.28);
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 500px at 50% -10%, rgba(181,138,70,0.10), transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:'Inter', system-ui, sans-serif;
+    line-height:1.5;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  a{color:inherit;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 24px 80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    max-width:720px;
+    padding:64px 0 36px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:40px;
+  }
+  .hero .kicker{
+    font-size:14px;
+    color:var(--brass);
+    margin:0 0 14px;
+    font-weight:600;
+  }
+  .hero h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:clamp(34px, 5vw, 52px);
+    line-height:1.08;
+    margin:0 0 12px;
+    letter-spacing:-0.01em;
+  }
+  .hero .subtitle{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:400;
+    font-size:19px;
+    color:var(--paper-dim);
+    margin:0 0 20px;
+  }
+  .hero .meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:20px 32px;
+    font-size:14px;
+    color:var(--paper-dim);
+    padding-top:16px;
+    border-top:1px solid var(--line);
+  }
+  .hero .meta div{display:flex; flex-direction:column; gap:4px;}
+  .hero .meta span.label{color:var(--brass); font-size:12px;}
+  .hero .meta span.value{color:var(--paper); font-size:15px;}
+
+  /* ---------- Layout ---------- */
+  main.floor{
+    display:grid;
+    grid-template-columns: 1fr 340px;
+    gap:40px;
+    align-items:start;
+  }
+  @media (max-width:900px){
+    main.floor{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Chart ---------- */
+  .chart{min-width:0;}
+  .podium-rail{
+    max-width:360px;
+    margin:0 auto 30px;
+    text-align:center;
+  }
+  .podium-rail .bar{
+    height:4px;
+    border-radius:2px;
+    background:linear-gradient(90deg, transparent, var(--brass), transparent);
+    margin-bottom:10px;
+  }
+  .podium-rail .label{
+    font-size:12.5px;
+    color:var(--paper-dim);
+    letter-spacing:0.03em;
+  }
+
+  .seat-scroll{overflow-x:auto; padding-bottom:6px;}
+  .rows{display:flex; flex-direction:column; gap:14px; min-width:520px;}
+
+  .row{display:flex; flex-direction:column; align-items:center;}
+  .row-head{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    font-size:12.5px;
+    color:var(--paper-dim);
+    margin-bottom:6px;
+  }
+  .row-head .row-letter{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    color:var(--paper);
+    width:18px;
+  }
+  .row-head .row-cat{display:flex; align-items:center; gap:6px;}
+  .row-head .dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
+  .row-head .row-price{color:var(--brass); font-variant-numeric:tabular-nums;}
+
+  .seat-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    transition:width 0.2s ease;
+  }
+  .aisle{width:22px; flex:0 0 auto;}
+
+  .seat{
+    position:relative;
+    width:26px;
+    height:28px;
+    flex:0 0 auto;
+    border-radius:5px 5px 2px 2px;
+    border:1.5px solid var(--line-strong);
+    background:transparent;
+    cursor:pointer;
+    padding:0;
+    transition:transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  }
+  .seat::after{
+    content:"";
+    position:absolute;
+    left:50%; bottom:-4px;
+    width:3px; height:5px;
+    background:var(--line-strong);
+    transform:translateX(-50%);
+    border-radius:0 0 1px 1px;
+  }
+  .seat:hover:not(:disabled){transform:translateY(-2px); border-color:var(--brass);}
+  .seat:focus-visible{outline:2px solid var(--brass); outline-offset:2px;}
+  .seat.taken{
+    background:var(--claret);
+    border-color:var(--claret);
+    cursor:not-allowed;
+    opacity:0.85;
+  }
+  .seat.taken::after{background:var(--claret);}
+  .seat.taken:hover{transform:none;}
+  .seat.selected{
+    background:var(--brass);
+    border-color:var(--brass);
+  }
+  .seat.selected::after{background:var(--brass);}
+  .seat.selected::before{
+    content:"✓";
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  .seat:disabled.own{
+    background:var(--brass-deep);
+    border-color:var(--brass-deep);
+    cursor:default;
+  }
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:18px;
+    list-style:none;
+    padding:26px 0 0;
+    margin:26px 0 0;
+    border-top:1px solid var(--line);
+    font-size:13px;
+    color:var(--paper-dim);
+  }
+  .legend li{display:flex; align-items:center; gap:8px;}
+  .legend .swatch{width:16px; height:17px; border-radius:4px 4px 1px 1px; border:1.5px solid var(--line-strong);}
+  .legend .swatch.taken{background:var(--claret); border-color:var(--claret);}
+  .legend .swatch.selected{background:var(--brass); border-color:var(--brass);}
+
+  /* ---------- Panel ---------- */
+  aside.panel{
+    position:sticky;
+    top:24px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .card{
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:22px;
+  }
+  .card h2{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:19px;
+    margin:0 0 16px;
+  }
+  #selectedList{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; min-height:20px;}
+  #selectedList li{
+    display:flex;
+    justify-content:space-between;
+    font-size:14px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--line);
+  }
+  #selectedList .empty{color:var(--paper-dim); font-style:italic; font-size:14px; border-bottom:none;}
+  .total{
+    display:flex;
+    justify-content:space-between;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--line-strong);
+    font-size:16px;
+  }
+  .total span:last-child{color:var(--brass); font-variant-numeric:tabular-nums; font-weight:600;}
+
+  label{display:block; font-size:13px; color:var(--paper-dim); margin-bottom:6px;}
+  input[type=text], input[type=email]{
+    width:100%;
+    padding:10px 12px;
+    background:var(--ink);
+    border:1px solid var(--line-strong);
+    border-radius:5px;
+    color:var(--paper);
+    font-size:14px;
+    font-family:inherit;
+    margin-bottom:14px;
+  }
+  input:focus-visible{outline:2px solid var(--brass); outline-offset:1px;}
+
+  button{
+    font-family:inherit;
+    font-size:14px;
+    font-weight:600;
+    border-radius:5px;
+    border:1px solid transparent;
+    padding:11px 16px;
+    cursor:pointer;
+    width:100%;
+    transition:background 0.15s ease, opacity 0.15s ease;
+  }
+  button.primary{background:var(--brass); color:var(--ink);}
+  button.primary:hover:not(:disabled){background:var(--brass-deep);}
+  button.primary:disabled{opacity:0.45; cursor:not-allowed;}
+  button.ghost{background:transparent; border-color:var(--line-strong); color:var(--paper);}
+  button.ghost:hover{border-color:var(--brass); color:var(--brass);}
+  button.small{width:auto; padding:6px 10px; font-size:12.5px;}
+
+  .hint{font-size:12.5px; color:var(--paper-dim); margin:12px 0 0;}
+  .banner{
+    padding:12px 14px;
+    border-radius:6px;
+    font-size:13.5px;
+    border:1px solid var(--line-strong);
+    background:var(--ink);
+  }
+  .banner.error{border-color:var(--claret); color:#E8B4AC;}
+  .banner.ok{border-color:var(--brass); color:var(--paper);}
+
+  #lookupResults{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:10px;}
+  #lookupResults li{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13.5px;
+    background:var(--ink);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:8px 10px;
+  }
+  #lookupResults .none{color:var(--paper-dim); font-style:italic; background:none; border:none; padding:0;}
+
+  footer.note{
+    max-width:720px;
+    margin:56px 0 0;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+    font-size:12.5px;
+    color:var(--paper-dim);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <p class="kicker">Paddle &amp; Place</p>
+    <h1 id="eventName">The September Rooms</h1>
+    <p class="subtitle" id="eventSubtitle">An evening sale of modern &amp; contemporary works</p>
+    <div class="meta">
+      <div><span class="label">Date</span><span class="value" id="eventDate">Saturday, 26 September 2026 · 7:00 PM</span></div>
+      <div><span class="label">Venue</span><span class="value" id="eventVenue">Hall Three, The Ardmore Rooms</span></div>
+      <div><span class="label">Seats open</span><span class="value" id="seatsOpen">—</span></div>
+    </div>
+  </header>
+
+  <main class="floor">
+    <section class="chart" aria-label="Seating chart">
+      <div class="podium-rail">
+        <div class="bar"></div>
+        <div class="label">Auctioneer's podium</div>
+      </div>
+
+      <div class="seat-scroll">
+        <div class="rows" id="rows"></div>
+      </div>
+
+      <ul class="legend">
+        <li><span class="swatch"></span> Available</li>
+        <li><span class="swatch selected"></span> In your selection</li>
+        <li><span class="swatch taken"></span> Reserved</li>
+      </ul>
+    </section>
+
+    <aside class="panel">
+      <div id="statusBanner"></div>
+
+      <div class="card">
+        <h2>Your selection</h2>
+        <ul id="selectedList"><li class="empty">No seats selected yet — choose from the chart.</li></ul>
+        <div class="total"><span>Total</span><span id="total">$0</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Register your paddle</h2>
+        <label for="nameInput">Name</label>
+        <input type="text" id="nameInput" placeholder="Your full name" autocomplete="name">
+        <label for="emailInput">Email</label>
+        <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+        <button class="primary" id="reserveBtn">Reserve selected seats</button>
+        <p class="hint">Your email is how you'll find or release your seats later. Reservation details are stored so other visitors' seat choices stay in sync — treat this as a shared sign-up sheet rather than a private form.</p>
+      </div>
+
+      <div class="card">
+        <h2>Find your reservations</h2>
+        <label for="lookupEmail">Email</label>
+        <input type="email" id="lookupEmail" placeholder="you@example.com">
+        <button class="ghost" id="lookupBtn">Look up</button>
+        <ul id="lookupResults"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="note">
+    Seats, categories and pricing are set in the <code>CONFIG</code> object near the top of the script — edit that to relabel rows, change prices, or resize the room. Reservation data is written to shared storage, so every visitor viewing this page sees the same seating chart update in real time.
+  </footer>
+</div>
+
+<script>
+/* ======================================================================
+   CONFIG — edit this block to relabel the sale, rows, pricing, or size
+   ====================================================================== */
+const CONFIG = {
+  event: {
+    name: "The September Rooms",
+    subtitle: "An evening sale of modern & contemporary works",
+    date: "Saturday, 26 September 2026 · 7:00 PM",
+    venue: "Hall Three, The Ardmore Rooms"
+  },
+  seatsPerSide: 6, // seats each side of the centre aisle
+  rows: [
+    { id: "A", category: "Premier view", price: 250, color: "#B58A46" },
+    { id: "B", category: "Premier view", price: 250, color: "#B58A46" },
+    { id: "C", category: "Salon",        price: 150, color: "#8C6A34" },
+    { id: "D", category: "Salon",        price: 150, color: "#8C6A34" },
+    { id: "E", category: "Salon",        price: 150, color: "#8C6A34" },
+    { id: "F", category: "Gallery",      price: 75,  color: "#5C6660" },
+    { id: "G", category: "Gallery",      price: 75,  color: "#5C6660" },
+    { id: "H", category: "Gallery",      price: 75,  color: "#5C6660" }
+  ]
+};
+
+const STORAGE_KEY = "reservations";
+
+/* ---------------------------------------------------------------------
+   State
+   --------------------------------------------------------------------- */
+const state = {
+  reservations: {},   // seatId -> { name, email, paddle, category, price, reservedAt }
+  selected: new Set(),
+  loading: true,
+  saving: false
+};
+
+const seatMeta = {}; // seatId -> { rowId, category, price }
+
+function buildSeatMeta(){
+  CONFIG.rows.forEach(row => {
+    for (let side = 0; side < 2; side++){
+      for (let i = 1; i <= CONFIG.seatsPerSide; i++){
+        const num = side === 0 ? i : CONFIG.seatsPerSide + i;
+        const seatId = row.id + num;
+        seatMeta[seatId] = { rowId: row.id, category: row.category, price: row.price };
+      }
+    }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Rendering
+   --------------------------------------------------------------------- */
+function renderHeader(){
+  document.getElementById("eventName").textContent = CONFIG.event.name;
+  document.getElementById("eventSubtitle").textContent = CONFIG.event.subtitle;
+  document.getElementById("eventDate").textContent = CONFIG.event.date;
+  document.getElementById("eventVenue").textContent = CONFIG.event.venue;
+}
+
+function renderChart(){
+  const rowsEl = document.getElementById("rows");
+  rowsEl.innerHTML = "";
+
+  CONFIG.rows.forEach((row, idx) => {
+    const rowWrap = document.createElement("div");
+    rowWrap.className = "row";
+
+    const head = document.createElement("div");
+    head.className = "row-head";
+    head.innerHTML = `
+      <span class="row-letter">${row.id}</span>
+      <span class="row-cat"><i class="dot" style="background:${row.color}"></i>${row.category}</span>
+      <span class="row-price">$${row.price}</span>
+    `;
+    rowWrap.appendChild(head);
+
+    const seatRow = document.createElement("div");
+    seatRow.className = "seat-row";
+    const widthPct = 62 + (idx / (CONFIG.rows.length - 1)) * 38;
+    seatRow.style.width = widthPct + "%";
+    seatRow.style.minWidth = "460px";
+
+    for (let side = 0; side < 2; side++){
+      for (let i = 1; i <= CONFIG.seatsPerSide; i++){
+        const num = side === 0 ? i : CONFIG.seatsPerSide + i;
+        const seatId = row.id + num;
+        seatRow.appendChild(makeSeatButton(seatId, row));
+      }
+      if (side === 0){
+        const aisle = document.createElement("div");
+        aisle.className = "aisle";
+        seatRow.appendChild(aisle);
+      }
+    }
+
+    rowWrap.appendChild(seatRow);
+    rowsEl.appendChild(rowWrap);
+  });
+
+  updateSeatVisuals();
+}
+
+function makeSeatButton(seatId, row){
+  const btn = document.createElement("button");
+  btn.className = "seat";
+  btn.type = "button";
+  btn.dataset.seatId = seatId;
+  btn.setAttribute("aria-label", `Seat ${seatId}, ${row.category}, $${row.price}`);
+  btn.addEventListener("click", () => onSeatClick(seatId));
+  return btn;
+}
+
+function updateSeatVisuals(){
+  const total = Object.keys(seatMeta).length;
+  const takenCount = Object.keys(state.reservations).length;
+  document.getElementById("seatsOpen").textContent =
+    state.loading ? "loading…" : `${total - takenCount} of ${total}`;
+
+  document.querySelectorAll(".seat").forEach(btn => {
+    const seatId = btn.dataset.seatId;
+    const taken = !!state.reservations[seatId];
+    const selected = state.selected.has(seatId);
+    btn.classList.toggle("taken", taken);
+    btn.classList.toggle("selected", selected && !taken);
+    btn.disabled = taken || state.saving;
+    if (taken){
+      const r = state.reservations[seatId];
+      btn.title = `Seat ${seatId} — reserved`;
+    } else {
+      btn.title = `Seat ${seatId} — ${seatMeta[seatId].category}, $${seatMeta[seatId].price}`;
+    }
+  });
+
+  renderSelection();
+}
+
+function renderSelection(){
+  const list = document.getElementById("selectedList");
+  const ids = Array.from(state.selected).sort();
+  if (ids.length === 0){
+    list.innerHTML = `<li class="empty">No seats selected yet — choose from the chart.</li>`;
+  } else {
+    list.innerHTML = ids.map(id => {
+      const m = seatMeta[id];
+      return `<li><span>Seat ${id} · ${m.category}</span><span>$${m.price}</span></li>`;
+    }).join("");
+  }
+  const total = ids.reduce((sum, id) => sum + seatMeta[id].price, 0);
+  document.getElementById("total").textContent = "$" + total;
+  document.getElementById("reserveBtn").disabled = ids.length === 0 || state.saving;
+}
+
+function showBanner(message, type){
+  const el = document.getElementById("statusBanner");
+  if (!message){ el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="banner ${type || ''}">${message}</div>`;
+}
+
+/* ---------------------------------------------------------------------
+   Storage
+   --------------------------------------------------------------------- */
+async function loadReservations(){
+  state.loading = true;
+  showBanner("Loading the seating chart…", "");
+  try {
+    const result = await window.storage.get(STORAGE_KEY, true);
+    state.reservations = result ? JSON.parse(result.value) : {};
+  } catch (err) {
+    // key not found yet, or read error — start with an empty chart
+    state.reservations = {};
+  }
+  state.loading = false;
+  showBanner("");
+  updateSeatVisuals();
+}
+
+async function saveReservations(){
+  const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state.reservations), true);
+  if (!result) throw new Error("Storage write failed");
+}
+
+/* ---------------------------------------------------------------------
+   Interaction
+   --------------------------------------------------------------------- */
+function onSeatClick(seatId){
+  if (state.reservations[seatId] || state.saving) return;
+  if (state.selected.has(seatId)) state.selected.delete(seatId);
+  else state.selected.add(seatId);
+  updateSeatVisuals();
+}
+
+async function onReserve(){
+  const name = document.getElementById("nameInput").value.trim();
+  const email = document.getElementById("emailInput").value.trim();
+  const ids = Array.from(state.selected);
+
+  if (ids.length === 0) return;
+  if (!name || !email || !email.includes("@")){
+    showBanner("Enter your name and a valid email to register your paddle.", "error");
+    return;
+  }
+
+  state.saving = true;
+  updateSeatVisuals();
+  showBanner("Reserving your seats…", "");
+
+  try {
+    // refresh first, in case someone else reserved a seat you had selected
+    const latest = await window.storage.get(STORAGE_KEY, true);
+    state.reservations = latest ? JSON.parse(latest.value) : {};
+
+    const conflicts = ids.filter(id => state.reservations[id]);
+    if (conflicts.length > 0){
+      state.selected = new Set(ids.filter(id => !conflicts.includes(id)));
+      showBanner(`Sorry — seat${conflicts.length > 1 ? "s" : ""} ${conflicts.join(", ")} ${conflicts.length > 1 ? "were" : "was"} just taken. They've been removed from your selection.`, "error");
+      state.saving = false;
+      updateSeatVisuals();
+      return;
+    }
+
+    const paddle = String(1000 + Math.floor(Math.random() * 9000));
+    const reservedAt = new Date().toISOString();
+    ids.forEach(id => {
+      state.reservations[id] = {
+        name, email, paddle, reservedAt,
+        category: seatMeta[id].category,
+        price: seatMeta[id].price
+      };
+    });
+
+    await saveReservations();
+    state.selected.clear();
+    showBanner(`Paddle #${paddle} registered. Seats ${ids.join(", ")} are reserved for ${name}.`, "ok");
+  } catch (err) {
+    showBanner("Something went wrong saving your reservation. Please try again.", "error");
+  } finally {
+    state.saving = false;
+    updateSeatVisuals();
+  }
+}
+
+async function onLookup(){
+  const email = document.getElementById("lookupEmail").value.trim().toLowerCase();
+  const resultsEl = document.getElementById("lookupResults");
+  if (!email){
+    resultsEl.innerHTML = `<li class="none">Enter an email to search.</li>`;
+    return;
+  }
+
+  resultsEl.innerHTML = `<li class="none">Searching…</li>`;
+  try {
+    const latest = await window.storage.get(STORAGE_KEY, true);
+    state.reservations = latest ? JSON.parse(latest.value) : {};
+  } catch (err) {
+    // fall back to whatever is already in memory
+  }
+
+  const mine = Object.entries(state.reservations)
+    .filter(([, r]) => r.email && r.email.toLowerCase() === email);
+
+  if (mine.length === 0){
+    resultsEl.innerHTML = `<li class="none">No reservations found for that email.</li>`;
+    return;
+  }
+
+  resultsEl.innerHTML = mine.map(([seatId, r]) => `
+    <li>
+      <span>Seat ${seatId} · Paddle #${r.paddle}</span>
+      <button class="ghost small" data-release="${seatId}">Release</button>
+    </li>
+  `).join("");
+
+  resultsEl.querySelectorAll("[data-release]").forEach(btn => {
+    btn.addEventListener("click", () => onRelease(btn.dataset.release, email));
+  });
+
+  updateSeatVisuals();
+}
+
+async function onRelease(seatId, email){
+  try {
+    const latest = await window.storage.get(STORAGE_KEY, true);
+    state.reservations = latest ? JSON.parse(latest.value) : {};
+    const r = state.reservations[seatId];
+    if (r && r.email && r.email.toLowerCase() === email){
+      delete state.reservations[seatId];
+      await saveReservations();
+      showBanner(`Seat ${seatId} has been released.`, "ok");
+    }
+  } catch (err) {
+    showBanner("Couldn't release that seat. Please try again.", "error");
+  }
+  updateSeatVisuals();
+  onLookup();
+}
+
+/* ---------------------------------------------------------------------
+   Init
+   --------------------------------------------------------------------- */
+function init(){
+  buildSeatMeta();
+  renderHeader();
+  renderChart();
+  document.getElementById("reserveBtn").addEventListener("click", onReserve);
+  document.getElementById("lookupBtn").addEventListener("click", onLookup);
+  document.getElementById("lookupEmail").addEventListener("keydown", e => {
+    if (e.key === "Enter") onLookup();
+  });
+  loadReservations();
+}
+
+init();
+</script>
+</body>
+</html>
